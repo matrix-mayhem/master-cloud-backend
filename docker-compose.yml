@@ -1,0 +1,63 @@
+services:
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL="postgresql://user:password@market-db:5432/market"
+      - REDIS_HOST=redis 
+      - REDIS_PORT=6379
+    depends_on:
+      - market-db
+      - redis
+    volumes:
+      - ./backend:/app
+  auth:
+    build: ./auth
+    container_name : auth
+    restart: always
+    ports: 
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=MyKey@123
+      - DATABASE_URL=postgresql://user:password@market-db:5432/market
+    depends_on:
+      - market-db
+    volumes:
+     - ./auth:/app
+    
+  worker:
+    build: ./worker
+    container_name: worker
+    restart: always
+    depends_on:
+      - redis
+      - market-db
+    environment:
+      - DATABASE_URL=postgresql://user:password@market-db:5432/market
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./worker:/app
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+  market-db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: market-db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: market
+    ports:
+      - "5432:5432"
+    volumes:
+      - tsdb-data:/var/lib/postgresql/data
+volumes:
+  tsdb-data:
