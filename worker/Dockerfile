@@ -14,5 +14,5 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["python", "worker.py"]
+CMD ["python", "worker_main.py"]
 

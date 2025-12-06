@@ -2,15 +2,11 @@ services:
   backend:
     build: ./backend
     container_name: backend
-    restart: always
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL="postgresql://user:password@market-db:5432/market"
       - REDIS_HOST=redis 
-      - REDIS_PORT=6379
     depends_on:
-      - market-db
       - redis
     volumes:
       - ./backend:/app
@@ -31,14 +27,10 @@ services:
   worker:
     build: ./worker
     container_name: worker
-    restart: always
     depends_on:
       - redis
-      - market-db
     environment:
-      - DATABASE_URL=postgresql://user:password@market-db:5432/market
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
     volumes:
       - ./worker:/app
   redis:
@@ -58,6 +50,6 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - tsdb-data:/var/lib/postgresql/data
+      - timescale_data:/var/lib/postgresql/data
 volumes:
-  tsdb-data:
+  timescale_data:

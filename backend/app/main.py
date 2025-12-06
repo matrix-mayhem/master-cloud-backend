@@ -6,31 +6,37 @@ from passlib.context import CryptContext
 from .deps import get_db
 from .crud import get_user_by_username, create_user
 from .auth import authenticate_user, create_access_token
+from app.api.tasks import router as task_router
 
-app = FastAPI(title="Core API")
+app = FastAPI(title="Backend API")
 
-class RegisterRequest(BaseModel):
-    username:str
-    email:str
-    password:str
+app.include_router(task_router, prefix="/tasks")
 
-#C
-@app.post("/register")
-def register_user(req: RegisterRequest, db=Depends(get_db)):
-    existing = get_user_by_username(db,req.username)
-    if existing:
-        raise HTTPException(409,"Username already exists")
-    user = create_user(db,req.username, req.email, req.password)
-    return {"id":user.id,"username":user.username}
+@app.get("/health")
+def health():
+    return {"status":"backend running"}
+# class RegisterRequest(BaseModel):
+#     username:str
+#     email:str
+#     password:str
 
-@app.post("/token")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
-    user = authenticate_user(db,form_data.username,form_data.password)
-    if not user:
-        raise HTTPException(401,"Invalid username or password")
-    token = create_access_token({"sub":user.username})
-    return {"access_token":token,"token_type":"bearer"}
+# #C
+# @app.post("/register")
+# def register_user(req: RegisterRequest, db=Depends(get_db)):
+#     existing = get_user_by_username(db,req.username)
+#     if existing:
+#         raise HTTPException(409,"Username already exists")
+#     user = create_user(db,req.username, req.email, req.password)
+#     return {"id":user.id,"username":user.username}
 
-@app.get("/secure-data")
-def secure_data(token: str=Depends()):
-    return {"secret":"You are authenticated"}
+# @app.post("/token")
+# def login(form_data: OAuth2PasswordRequestForm = Depends(), db=Depends(get_db)):
+#     user = authenticate_user(db,form_data.username,form_data.password)
+#     if not user:
+#         raise HTTPException(401,"Invalid username or password")
+#     token = create_access_token({"sub":user.username})
+#     return {"access_token":token,"token_type":"bearer"}
+
+# @app.get("/secure-data")
+# def secure_data(token: str=Depends()):
+#     return {"secret":"You are authenticated"}
