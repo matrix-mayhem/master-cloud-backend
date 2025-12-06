@@ -1,15 +1,15 @@
 from sqlalchemy import Column, Integer, String, DateTime, Float, BigInteger, PrimaryKeyConstraint
 from sqlalchemy.orm import declarative_base
-from app.database.database import Base
+from app.database.finance_db import Base
 
 class Candle(Base):
     __tablename__ = "candles"
 
-    symbol = Column(String, primary_key=True)
-    timestamp = Column(DateTime, primary_key=True)
+    symbol = Column(String, primary_key=True, index=True)
+    timestamp = Column(DateTime, primary_key=True, index=True)
 
-    open = Column(Float)
-    high = Column(Float)
-    low = Column(Float)
-    close = Column(Float)
-    volume = Column(Float)
+    open = Column(Float,nullable=False)
+    high = Column(Float,nullable=False)
+    low = Column(Float,nullable=False)
+    close = Column(Float,nullable=False)
+    volume = Column(Float,nullable=False)
