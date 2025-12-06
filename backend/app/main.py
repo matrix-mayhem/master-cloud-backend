@@ -7,10 +7,12 @@ from .deps import get_db
 from .crud import get_user_by_username, create_user
 from .auth import authenticate_user, create_access_token
 from app.api.tasks import router as task_router
+from app.api.finance import router as finance_router
 
 app = FastAPI(title="Backend API")
 
 app.include_router(task_router, prefix="/tasks")
+app.include_router(finance_router,prefix="/finance")
 
 @app.get("/health")
 def health():
