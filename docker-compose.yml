@@ -1,11 +1,14 @@
 services:
   backend:
+    env_file:
+      - .env
     build: ./backend
     container_name: backend
     ports:
       - "8000:8000"
     environment:
-      - REDIS_HOST=redis 
+      REDIS_HOST: ${REDIS_HOST}
+      DATABASE_URL: ${DATABASE_URL}
     depends_on:
       - redis
     volumes:
@@ -25,14 +28,22 @@ services:
      - ./auth:/app
     
   worker:
-    build: ./worker
+    env_file:
+      - .env
+    build: 
+      context: .
+      dockerfile: worker/Dockerfile
     container_name: worker
     depends_on:
       - redis
     environment:
-      - REDIS_HOST=redis
+      REDIS_HOST: ${REDIS_HOST}
+      DATABASE_URL: ${DATABASE_URL}
+      PYTHONPATH: /app
+    working_dir: /app
     volumes:
-      - ./worker:/app
+      - .:/app
+    command: ["python", "worker/worker_main.py"]
   redis:
     image: redis:7
     container_name: redis
@@ -40,13 +51,15 @@ services:
     ports:
       - "6379:6379"
   market-db:
+    env_file:
+      - .env
     image: timescale/timescaledb:latest-pg15
     container_name: market-db
     restart: always
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: market
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:

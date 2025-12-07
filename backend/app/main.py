@@ -4,8 +4,8 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt 
 from passlib.context import CryptContext
 from .deps import get_db
-from .crud import get_user_by_username, create_user
-from .auth import authenticate_user, create_access_token
+#from app.crud import get_user_by_username, create_user
+#from app.auth import authenticate_user, create_access_token
 from app.api.tasks import router as task_router
 from app.api.finance import router as finance_router
 

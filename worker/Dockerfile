@@ -6,13 +6,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists
 
-COPY requirements.txt .
+COPY worker/requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+ENV PYTHONPATH=/app
+
 EXPOSE 5000
 
-CMD ["python", "worker_main.py"]
+CMD ["python", "worker/worker_main.py"]
 

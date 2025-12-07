@@ -3,6 +3,7 @@ import redis
 import json
 import uuid
 import os
+from pydantic import BaseModel
 
 router = APIRouter()
 

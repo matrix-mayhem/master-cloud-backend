@@ -8,7 +8,16 @@ from tasks.finance.ingest import ingest_ohlc
 redis_host = os.getenv("REDIS_HOST", "redis")
 queue_name = "default"
 
-r = redis.Redis(host=redis_host, port=6379, db=0)
+#r = redis.Redis(host=redis_host, port=6379, db=0)
+
+try:
+    r = redis.Redis(host=redis_host, port=6379, decode_responses=False, db=0)
+    r.ping()
+    print(f"✅ Successfully connected to Redis at {redis_host}:6379")
+except Exception as e:
+    print(f"❌ ERROR: Could not connect to Redis. {e}")
+    # Exit if Redis connection fails on startup
+    exit(1)
 
 print("Worker started. Listening for tasks...")
 

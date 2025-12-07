@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Float, BigInteger, PrimaryKeyConstraint
 from sqlalchemy.orm import declarative_base
-from backend.app.database.finance_db import Base
+from worker_database import Base
 
 class Candle(Base):
     __tablename__ = "candles"
