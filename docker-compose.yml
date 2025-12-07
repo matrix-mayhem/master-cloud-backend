@@ -1,9 +1,9 @@
 services:
   backend:
-    env_file:
-      - .env
     build: ./backend
     container_name: backend
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     environment:
@@ -28,12 +28,12 @@ services:
      - ./auth:/app
     
   worker:
-    env_file:
-      - .env
     build: 
       context: .
       dockerfile: worker/Dockerfile
     container_name: worker
+    env_file:
+      - .env
     depends_on:
       - redis
     environment:
@@ -51,10 +51,10 @@ services:
     ports:
       - "6379:6379"
   market-db:
-    env_file:
-      - .env
     image: timescale/timescaledb:latest-pg15
     container_name: market-db
+    env_file:
+      - .env
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
