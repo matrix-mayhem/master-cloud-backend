@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, BigInteger, PrimaryKeyConstraint
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, String, Float, DateTime
 from worker_database import Base
 
 class Candle(Base):
@@ -8,8 +7,8 @@ class Candle(Base):
     symbol = Column(String, primary_key=True, index=True)
     timestamp = Column(DateTime, primary_key=True, index=True)
 
-    open = Column(Float,nullable=False)
-    high = Column(Float,nullable=False)
-    low = Column(Float,nullable=False)
-    close = Column(Float,nullable=False)
-    volume = Column(Float,nullable=False)
+    open = Column(Float, nullable=False)
+    high = Column(Float, nullable=False)
+    low = Column(Float, nullable=False)
+    close = Column(Float, nullable=False)
+    volume = Column(Float, nullable=False)
