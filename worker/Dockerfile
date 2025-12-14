@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "worker_main.py"]
+CMD ["python","-u" ,"worker_main.py"]

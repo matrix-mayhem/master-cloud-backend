@@ -28,6 +28,7 @@ services:
       - market-db
     volumes:
       - ./worker:/app
+    command: ["python", "worker_main.py"]
 
   redis:
     image: redis:7
