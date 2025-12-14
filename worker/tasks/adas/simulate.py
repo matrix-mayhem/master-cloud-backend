@@ -1,132 +1,135 @@
-import random
 import time
+import random
+import struct
 from datetime import datetime
 
 from worker_database import MarketSessionLocal
 from models.adas_frame import AdasFrame
+from models.can_frame import CanFrame
 
+# ==============================
+# Simulation control flag
+# ==============================
 SIM_RUNNING = False
 
-# -----------------------------
-# SENSOR MODELS (SIMULATED)
-# -----------------------------
 
-def simulate_radar():
+# ==============================
+# CAN ENCODING HELPERS
+# ==============================
+def encode_speed(speed_kmh: float) -> bytes:
     """
-    Simulate radar lead vehicle distance (meters)
+    Encode speed (km/h) into CAN payload (uint16, scale 0.01)
     """
-    return max(3.0, random.uniform(5.0, 50.0))
+    raw = int(speed_kmh * 100)
+    return struct.pack("<H", raw) + b"\x00" * 6
 
 
-def simulate_camera_lane():
+def encode_aeb(active: bool) -> bytes:
     """
-    Simulate camera-based lane detection
+    Encode AEB status into CAN payload
     """
-    return random.choice(["LEFT", "CENTER", "RIGHT"])
+    return struct.pack("<B", 1 if active else 0) + b"\x00" * 7
 
 
-def simulate_camera_sign():
-    """
-    Simulate traffic sign recognition
-    """
-    return random.choice(["NONE", "SPEED_30", "SPEED_60", "STOP"])
-
-
-# -----------------------------
-# SENSOR FUSION + CONTROL LOGIC
-# -----------------------------
-
-def fusion_and_control(ego_speed, lead_distance, lane_pos, sign):
-    """
-    Simple ADAS fusion logic:
-    - Radar + camera + rules
-    """
-    action = "MAINTAIN"
-
-    # 🚨 AEB LOGIC (highest priority)
-    if lead_distance < 8.0:
-        return "EMERGENCY_BRAKE", max(0.0, ego_speed - 20.0)
-
-    # 🛑 STOP sign
-    if sign == "STOP":
-        return "BRAKE", max(0.0, ego_speed - 10.0)
-
-    # 🚦 Speed signs
-    if sign == "SPEED_30" and ego_speed > 30:
-        return "BRAKE", ego_speed - 5.0
-
-    if sign == "SPEED_60" and ego_speed < 60:
-        return "ACCELERATE", ego_speed + 5.0
-
-    # 🚗 Lane-based comfort control
-    if lane_pos != "CENTER":
-        return "MAINTAIN", ego_speed
-
-    # 🧭 Default cruise behavior
-    if ego_speed < 50:
-        action = "ACCELERATE"
-        ego_speed += 2.0
-
-    return action, ego_speed
-
-
-# -----------------------------
-# MAIN ADAS SIMULATION LOOP
-# -----------------------------
-
+# ==============================
+# ADAS SIMULATION LOOP
+# ==============================
 def start_adas_simulation():
     global SIM_RUNNING
     SIM_RUNNING = True
 
     session = MarketSessionLocal()
-    ego_speed = 40.0  # km/h
+    print("🚗 ADAS simulation started")
 
-    print("🚗 ADAS simulation started (Radar + Camera + Fusion)...")
+    ego_speed = 60.0        # km/h
+    lead_distance = 40.0    # meters
 
     while SIM_RUNNING:
-        try:
-            # --- SENSOR INPUTS ---
-            lead_distance = simulate_radar()
-            lane_position = simulate_camera_lane()
-            detected_sign = simulate_camera_sign()
+        # ------------------------------
+        # Simulated Radar (vECU)
+        # ------------------------------
+        lead_distance += random.uniform(-3.0, 1.5)
+        lead_distance = max(2.0, lead_distance)
 
-            # --- FUSION + CONTROL ---
-            commanded_action, ego_speed = fusion_and_control(
-                ego_speed,
-                lead_distance,
-                lane_position,
-                detected_sign
-            )
+        # ------------------------------
+        # Camera Sign Detection (sim)
+        # ------------------------------
+        sign = random.choice(["NONE", "SPEED_30", "SPEED_60", "STOP"])
 
-            # --- STORE FRAME ---
-            frame = AdasFrame(
-                timestamp=datetime.utcnow(),
-                ego_speed=ego_speed,
-                lead_distance=lead_distance,
-                detected_sign=f"{detected_sign}|LANE_{lane_position}",
-                commanded_action=commanded_action
-            )
+        # ------------------------------
+        # AEB LOGIC
+        # ------------------------------
+        aeb_active = False
+        action = "MAINTAIN"
 
-            session.add(frame)
-            session.commit()
+        if lead_distance < 8.0:
+            aeb_active = True
+            ego_speed = max(0.0, ego_speed - 15.0)
+            action = "BRAKE"
 
-            # --- LOG OUTPUT ---
-            print(
-                f"🚗 v={ego_speed:.1f} km/h | "
-                f"radar={lead_distance:.1f} m | "
-                f"lane={lane_position} | "
-                f"sign={detected_sign} | "
-                f"action={commanded_action}"
-            )
+        elif sign == "STOP":
+            ego_speed = max(0.0, ego_speed - 10.0)
+            action = "BRAKE"
 
-            time.sleep(1)
+        elif sign == "SPEED_30" and ego_speed > 30:
+            ego_speed -= 5.0
+            action = "BRAKE"
 
-        except Exception as e:
-            print("❌ ADAS simulation error:", e)
-            time.sleep(1)
+        elif sign == "SPEED_60" and ego_speed < 60:
+            ego_speed += 3.0
+            action = "ACCELERATE"
+
+        # ------------------------------
+        # Store ADAS FRAME
+        # ------------------------------
+        adas = AdasFrame(
+            timestamp=datetime.utcnow(),
+            ego_speed=ego_speed,
+            lead_distance=lead_distance,
+            detected_sign=sign,
+            commanded_action=action,
+        )
+        session.add(adas)
+
+        # ------------------------------
+        # CAN TX (ADAS ECU → Radar vECU)
+        # ------------------------------
+        speed_payload = encode_speed(ego_speed)
+        aeb_payload = encode_aeb(aeb_active)
+
+        can_speed = CanFrame(
+            timestamp=datetime.utcnow(),
+            can_id=0x100,
+            payload=speed_payload,
+        )
+
+        can_aeb = CanFrame(
+            timestamp=datetime.utcnow(),
+            can_id=0x200,
+            payload=aeb_payload,
+        )
+
+        session.add(can_speed)
+        session.add(can_aeb)
+
+        session.commit()
+
+        # ------------------------------
+        # LOG OUTPUT
+        # ------------------------------
+        print(
+            f"🚗 v={ego_speed:.1f} km/h | "
+            f"d={lead_distance:.1f} m | "
+            f"sign={sign} | "
+            f"AEB={'ON' if aeb_active else 'OFF'}"
+        )
+        print(f"🚌 CAN TX | ID=0x100 | DATA={speed_payload.hex()}")
+        print(f"🚌 CAN TX | ID=0x200 | DATA={aeb_payload.hex()}")
+
+        time.sleep(1.0)
 
     session.close()
-    print("🛑 ADAS simulation stopped.")
+    print("🛑 ADAS simulation stopped")
 
 
 def stop_adas_simulation():
